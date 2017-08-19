@@ -1,13 +1,15 @@
-package OracleConnectionTest;
+package JDBCOracleConnection;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
-import java.util.List;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 public class JDBCUtils {
 	private static String dbUrl = "jdbc:oracle:thin:@172.29.41.138:1521:DEMO";
@@ -55,31 +57,35 @@ public class JDBCUtils {
 	}
 
 	// 插入若干行数据
-	public static boolean insertDataIntoOracleTable(Connection conn,
-			List dataList, String tName) {
+	public static boolean insertDataIntoOracleTable(Connection conn, String tName) {
 		PreparedStatement preStatement = null;
 		Savepoint sp = null;
 		try {
-			if (dataList == null) {
-				System.out.println("插入数据源为空！");
-				return false;
-			}
 			// 关闭自动提交事务设置
 			conn.setAutoCommit(false);
-			// 设置一个存储点
+			// 设置存储点
 			sp = conn.setSavepoint();
-
 			preStatement = conn.prepareStatement("insert into " + tName
 					+ "(id, name, sex, birthday) Values(?,?,?,?)");
-
 			// 设置插入数据
-			for (int i = 0; i < dataList.size(); i++) {
-				Object[] objs = (Object[]) dataList.get(i);
-				for (int j = 0; j < objs.length; j++) {
-					preStatement.setObject(j + 1, objs[j]);
-				}
-				preStatement.executeUpdate();
-			}
+			DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			preStatement.setInt(1, 450001);
+			preStatement.setString(2,"Kobe.Bryant");
+			preStatement.setString(3, "Male");
+			preStatement.setDate(4, new Date(sdf.parse("1977-08-24").getTime()));
+			preStatement.executeUpdate();
+			
+			preStatement.setInt(1, 450002);
+			preStatement.setString(2,"Michael.Jordan");
+			preStatement.setString(3, "Male");
+			preStatement.setDate(4, new Date(sdf.parse("1962-04-23").getTime()));
+			preStatement.executeUpdate();
+			
+			preStatement.setInt(1, 450003);
+			preStatement.setString(2,"James.Laurance");
+			preStatement.setString(3, "Female");
+			preStatement.setDate(4, new Date(sdf.parse("1987-11-12").getTime()));
+			preStatement.executeUpdate();
 
 			// 手动提交事务
 			conn.commit();
@@ -90,9 +96,10 @@ public class JDBCUtils {
 			System.out.println("出错信息：" + e.getMessage());
 			try {
 				System.out.println("事务回滚至存储点...");
-				// 回滚
+				// 回滚至之前的存储点
 				conn.rollback(sp);
 				preStatement.close();
+				// 恢复自动提交事务设置
 				conn.setAutoCommit(true);
 				System.out.println("回滚成功！");
 			} catch (SQLException e1) {
@@ -103,6 +110,44 @@ public class JDBCUtils {
 		return true;
 	}
 
+	// 更新数据
+		public static boolean updateDataFromOracleTable(Connection conn, String tName) {
+			PreparedStatement preStatement = null;
+			Savepoint sp = null;
+			try {
+				// 关闭自动提交事务设置
+				conn.setAutoCommit(false);
+				// 设置存储点
+				sp = conn.setSavepoint();
+				preStatement = conn.prepareStatement("update " + tName
+						+ " set name=? where id=450001");
+
+				preStatement.setString(1, "Lumin.");
+				preStatement.executeUpdate();
+
+				// 手动提交事务
+				conn.commit();
+				// 恢复自动提交事务设置
+				conn.setAutoCommit(true);
+			} catch (Exception e) {
+				System.out.println(tName + "表数据更新过程中出错！");
+				System.out.println("出错信息：" + e.getMessage());
+				try {
+					System.out.println("事务回滚至存储点...");
+					// 回滚至之前的存储点
+					conn.rollback(sp);
+					preStatement.close();
+					// 恢复自动提交事务设置
+					conn.setAutoCommit(true);
+					System.out.println("回滚成功！");
+				} catch (SQLException e1) {
+					System.out.println("回滚失败！");
+				}
+				return false;
+			}
+			return true;
+		}
+		
 	// 删除所有数据
 	public static boolean deleteDataFromOracleTable(Connection conn,
 			String tName) {
@@ -138,7 +183,8 @@ public class JDBCUtils {
 		}
 		return true;
 	}
-
+	
+	
 	// 查询数据，获得可滚动的结果集
 	public static ResultSet getOracleQueryResult(Connection conn, String tName) {
 		Statement statement = null;
@@ -180,22 +226,27 @@ public class JDBCUtils {
 			System.out.println("结果集为空");
 			return;
 		}
-		String dno = null;
-		String dname = null;
-
+		String no = null;
+		String name = null;
+		String sex = null;
+		String birth = null;
 		try {
 			System.out.println("顺序查：");
 			while (resultSet.next()) {
-				dno = resultSet.getString(1);
-				dname = resultSet.getString(2);
-				System.out.println(dno + ": " + dname);
+				no = resultSet.getString(1);
+				name = resultSet.getString(2);
+				sex = resultSet.getString(3);
+				birth = resultSet.getString(4);
+				System.out.println(no + ": " + name + ", " + sex + ", " + birth);
 			}
 
 			System.out.println("逆序查：");
 			while (resultSet.previous()) {
-				dno = resultSet.getString(1);
-				dname = resultSet.getString(2);
-				System.out.println(dno + ": " + dname);
+				no = resultSet.getString(1);
+				name = resultSet.getString(2);
+				sex = resultSet.getString(3);
+				birth = resultSet.getString(4);
+				System.out.println(no + ": " + name + ", " + sex + ", " + birth);
 			}
 		} catch (SQLException e) {
 			System.out.println("打印ResultSet出错！");
